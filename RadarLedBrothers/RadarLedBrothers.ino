@@ -1,18 +1,11 @@
 /*
+  TODO: Reference original code:
   Arduino Mario Bros Tunes
-  With Piezo Buzzer and PWM
 
-  Connect the positive side of the Buzzer to pin 3,
-  then the negative side to a 1k ohm resistor. Connect
-  the other side of the 1 k ohm resistor to
-  ground(GND) pin on the Arduino.
-
-  by: Dipto Pratyaksa
-  last updated: 31/3/13
 */
 
 /*************************************************
- * Public Constants
+ * Public Constants and includes
  *************************************************/
 #include "pitches.h"
 #include "radarTunes.h"
@@ -24,11 +17,15 @@
 #endif
 ////
 
+int nodeLED = D0;
 int melodyPin = D2; //PIEZO pun
 int PIN = D4; //LED pin
 int ledPin = LED_BUILTIN;
 int buttonPin = D3; //BUTTON PIN
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);
+//Ok so I actually only have 5 pixels in my strip, but I didnt realize this influences the timing
+//So after I had all the timing correct I found out writing to these non existent leds takes TIME
+//If I set this number to the actual LED number (5) the beat is now waaay too fast. Keep that in mind when changing this number
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(30, PIN, NEO_GRB + NEO_KHZ800); 
 
 boolean start = false;
 int plays = 0;
@@ -36,14 +33,21 @@ int song = 0;
 
 void setup(void)
 {
-  // initialize digital pin LED_BUILTIN as an output.
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+  colorWipe(strip.Color(0, 0, 0), 1); // black
+  
  
   Serial.begin(9600);
   pinMode(D2, OUTPUT);//buzzer
   pinMode(ledPin, OUTPUT);//led indicator when singing a note
   pinMode(buttonPin, INPUT);
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  pinMode(nodeLED, OUTPUT);
+
+  digitalWrite(nodeLED, HIGH);
+  digitalWrite(ledPin, HIGH);
+  
+  
   Serial.println("program loaded");
 }
 void loop()
@@ -89,22 +93,19 @@ void loop()
 void sing() {
   // iterate over the notes of the melody:
 
-
-  Serial.println(" 'Radar Theme'");
+  Serial.println(" 'Radar Love'");
   int size = sizeof(radarMelody) / sizeof(int);
   for (int thisNote = 0; thisNote < size; thisNote++) {
-
-    
     // to calculate the note duration, take one second
     // divided by the note type.
     //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
     int noteDuration = 1;
     if (radarTempo[thisNote] > 100) //dirty little hack to allow tones longer than a full note
     {
-      noteDuration = 500 * (radarTempo[thisNote] - 100);
+      noteDuration = 1000 * (radarTempo[thisNote] - 100);
     }
     else {
-      noteDuration = 500 / radarTempo[thisNote];
+      noteDuration = 1000 / radarTempo[thisNote];
     }
 
     buzz(melodyPin, radarMelody[thisNote], noteDuration);
@@ -118,6 +119,7 @@ void sing() {
     // stop the tone playing (this was in the original code but made pauses seem very long  
     //buzz(melodyPin, 0, noteDuration);
   }
+  colorWipe(strip.Color(0, 0, 0), 1); // black
 }
 
 void buzz(int targetPin, long frequency, long length) {
@@ -125,7 +127,15 @@ void buzz(int targetPin, long frequency, long length) {
   colorWipe(strip.Color(255, 0, 0), 1); // Red
   
   //Changed the following line, the code crashes when freq is allowed to be 0
-  long delayValue = 1000000 / (frequency+1) / 2; // calculate the delay value between transitions
+  if (frequency == 0)
+  {
+    frequency = 1;
+  }
+  if (length == 1000)
+  {
+    length = 999;   //need to do this because 1000 generates a high beep
+  }
+  long delayValue = 1000000 / frequency / 2; // calculate the delay value between transitions
   //// 1 second's worth of microseconds, divided by the frequency, then split in half since
   //// there are two phases to each cycle
   long numCycles = frequency * length / 1000; // calculate the number of cycles for proper timing
