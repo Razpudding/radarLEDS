@@ -1,7 +1,12 @@
 /*
-  TODO: Reference original code:
-  Arduino Mario Bros Tunes
-
+* This project was built off of this example:
+* http://www.princetronics.com/supermariothemesong/
+* Keep in mind the board it was built for (nodeMCU) has a weird bug explained here:
+* https://github.com/esp8266/Arduino/issues/2491#issuecomment-268137743
+* Which I worked around by making sure the frequency is never 0
+* pitches has a mapping of notes to frequencies, radarTunes has a mapping of notes
+* and durations to the song Radar Love by Golden Earring (aka one of the best songs ever made)
+* The project makes use of the adafruit neopixel library as well
 */
 
 /*************************************************
@@ -28,6 +33,7 @@ int buttonPin = D3; //BUTTON PIN
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(30, PIN, NEO_GRB + NEO_KHZ800); 
 
 boolean start = false;
+boolean sense = false;
 int plays = 0;
 int song = 0;
 
@@ -37,7 +43,6 @@ void setup(void)
   strip.show(); // Initialize all pixels to 'off'
   colorWipe(strip.Color(0, 0, 0), 1); // black
   
- 
   Serial.begin(9600);
   pinMode(D2, OUTPUT);//buzzer
   pinMode(ledPin, OUTPUT);//led indicator when singing a note
@@ -55,14 +60,20 @@ void loop()
   // read the input on analog pin 0:
   int sensorValue = analogRead(A0);
   int buttonState = digitalRead(buttonPin);
+  
   //Serial.println(sensorValue);
   //Serial.println(buttonState);
 
+  if (sense)
+  {
+    showPower(sensorValue);
+  }
+  
   //Temp test to see if the floating value of the disconnected button ever gets to 0
   if (buttonState == 0)
   {
-    Serial.println("warning button at 0!!!");
-    Serial.println("");
+    //Serial.println("warning button at 0!!!");
+    //Serial.println("");
   }
 
   //The button resets the number of plays
@@ -71,17 +82,18 @@ void loop()
     plays = 0;
   }
 
-  //Log the first start
+  //(re)start the sensor
   else if(buttonState == 0 && !start )
   {
     
-    Serial.println("Here we go!");
-    start = true;     
+    Serial.println("Is it light?");
+    sense = true;     
   }
 
   //If it's dark enough (600 is lights out in my room) and plays < 3, sing the song
   if (sensorValue < 600 && start && plays <3)
   {
+    colorWipe(strip.Color(0, 0, 0), 1); // black
     plays++;
     Serial.println("start the music!");
     //sing the tunes
@@ -89,6 +101,28 @@ void loop()
   }
 }
 
+void showPower(int light){
+  //Serial.println(light);
+  int green = strip.Color(0,10,0);
+  int black = strip.Color(0,0,0);
+  
+  if (light > 900)  { strip.setPixelColor(4, green); }
+  else {strip.setPixelColor(4, black);}
+  if (light > 800)  { strip.setPixelColor(3, green); }
+  else {strip.setPixelColor(3, black);}
+  if (light > 700)  { strip.setPixelColor(2, green); }
+  else {strip.setPixelColor(2, black);}
+  if (light > 600)  { strip.setPixelColor(1, green); }
+  else {strip.setPixelColor(1, black);}
+  if (light > 500)  { strip.setPixelColor(0, green); }
+  else {strip.setPixelColor(0, black);}
+  strip.show();
+  
+  if (light < 600)
+  {
+    start = true;
+  }
+}
 
 void sing() {
   // iterate over the notes of the melody:
@@ -120,6 +154,7 @@ void sing() {
     //buzz(melodyPin, 0, noteDuration);
   }
   colorWipe(strip.Color(0, 0, 0), 1); // black
+  if (plays ==2) { start = false; } //reset start so we can measure power again
 }
 
 void buzz(int targetPin, long frequency, long length) {
