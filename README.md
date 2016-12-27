@@ -18,3 +18,5 @@ I had some help from a friend who is a musician, he figured out whcih notes were
 All in all I spent about 4 whole days making this.
 
 The project is probably up to the conventions of the hardware scene as I;m not familiar with those, but if you want me to explain anything, just let me know.
+
+![image of the finished product](https://razpudding.github.io/img/finished_project.jpg)
